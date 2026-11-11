@@ -1,13 +1,13 @@
 {
   "name": "lol-companion",
   "productName": "LoL Companion",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "League of Legends profil, maç geçmişi, rakip analizi ve canlı oyun yardımcısı",
   "main": "main.js",
   "license": "MIT",
   "scripts": {
     "start": "node scripts/start.js",
-    "check": "node --check main.js && node --check preload.js && node --check src/riot-api.js && node --check src/lcu.js && node --check src/providers.js && node --check src/live-client.js && node --check src/analysis.js && node --check src/ddragon.js && node --check renderer/renderer.js",
+    "check": "node --check main.js && node --check preload.js && node --check preload-overlay.js && node --check src/overlay.js && node --check renderer/overlay.js && node --check src/riot-api.js && node --check src/lcu.js && node --check src/providers.js && node --check src/live-client.js && node --check src/analysis.js && node --check src/ddragon.js && node --check renderer/renderer.js",
     "dist": "electron-builder --win --publish never",
     "dist:local": "electron-builder --win --publish never -c.win.signAndEditExecutable=false"
   },
@@ -15,7 +15,7 @@
     "appId": "com.lolcompanion.app",
     "productName": "LoL Companion",
     "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "src/**/*", "renderer/**/*", "package.json"],
+    "files": ["main.js", "preload.js", "preload-overlay.js", "src/**/*", "renderer/**/*", "package.json"],
     "win": { "target": ["portable", "nsis"] },
     "portable": { "artifactName": "LoL-Companion-${version}-portable.${ext}" },
     "nsis": {

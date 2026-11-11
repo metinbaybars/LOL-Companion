@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { OverlayManager } = require('./src/overlay');
 const path = require('path');
 const fs = require('fs');
 const { RiotApi, parseRiotId, cleanText } = require('./src/riot-api');
@@ -13,6 +14,8 @@ const DEFAULT_SETTINGS = {
   dataSource: 'auto', // auto: istemci açıksa istemci, değilse Riot API | riot: sadece Riot API
   apiKey: '', platform: 'tr1', riotId: '', alwaysOnTop: false,
   profileMatchCount: 15, liveMatchCount: 8, autoAnalyze: true,
+  // Oyun içi pencere
+  overlayHotkey: 'Alt+X', overlayPosition: 'right', overlayOpacity: 0.88, overlayAutoShow: false,
 };
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 function loadSettings() {
@@ -35,8 +38,12 @@ let riotProvider;
 let win;
 const live = new LiveClient(2000);
 let analysisRun = 0; // yeni analiz başlayınca eskisini iptal etmek için
+let overlay;
 
-const send = (ch, payload) => { if (win && !win.isDestroyed()) win.webContents.send(ch, payload); };
+const send = (ch, payload) => {
+  if (overlay) overlay.track(ch, payload); // oyun içi pencere de aynı olayları izler
+  if (win && !win.isDestroyed()) win.webContents.send(ch, payload);
+};
 
 function handle(channel, fn) {
   ipcMain.handle(channel, async (_e, ...args) => {
@@ -199,6 +206,7 @@ function createWindow() {
     },
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  win.on('closed', () => { win = null; app.quit(); }); // gizli oyun içi pencere uygulamayı açık tutmasın
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://')) shell.openExternal(url);
     return { action: 'deny' };
@@ -210,6 +218,8 @@ app.whenReady().then(() => {
   riot = new RiotApi({ apiKey: settings.apiKey, platform: settings.platform });
   lcuProvider = new LcuProvider(new LcuClient());
   riotProvider = new RiotProvider(riot);
+  overlay = new OverlayManager({ getSettings: () => settings, ddragon });
+  if (!overlay.setHotkey(settings.overlayHotkey)) console.error('Kısayol kaydedilemedi:', settings.overlayHotkey);
 
   // Anahtarın kendisi arayüze gönderilmez, sadece ayarlı olup olmadığı
   const publicSettings = () => ({ ...settings, apiKey: '', apiKeySet: !!settings.apiKey });
@@ -218,7 +228,15 @@ app.whenReady().then(() => {
     patch = { ...patch };
     if (!patch.apiKey) delete patch.apiKey; else patch.apiKey = cleanText(patch.apiKey);
     if (patch.riotId !== undefined) patch.riotId = cleanText(patch.riotId);
+    // Kısayol değiştiyse önce kaydetmeyi dene; başka program kullanıyorsa eskisini geri al
+    if (patch.overlayHotkey !== undefined && patch.overlayHotkey !== overlay.hotkey) {
+      if (!overlay.setHotkey(patch.overlayHotkey)) {
+        overlay.setHotkey(settings.overlayHotkey);
+        throw new Error(`"${patch.overlayHotkey}" kısayolu kullanılamıyor (başka bir program kullanıyor olabilir).`);
+      }
+    }
     settings = { ...settings, ...patch };
+    overlay.applySettings();
     saveSettings(settings);
     riot.configure({ apiKey: settings.apiKey, platform: settings.platform });
     if (win && patch.alwaysOnTop !== undefined) win.setAlwaysOnTop(!!settings.alwaysOnTop);
@@ -236,6 +254,8 @@ app.whenReady().then(() => {
   handle('profile:me', myRiotId);
   handle('game:analyze', analyzeActiveGame);
   handle('live:status', () => ({ inGame: live.inGame, phase: lastPhase }));
+  handle('overlay:toggle', () => overlay.toggle());
+  handle('overlay:status', () => ({ visible: overlay.visible, hotkey: overlay.hotkey }));
   handle('open:external', (url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); });
 
   createWindow();
@@ -249,4 +269,6 @@ app.whenReady().then(() => {
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
+// Oyun içi pencere açık kalsa bile ana pencere kapanınca uygulama kapanır
 app.on('window-all-closed', () => { live.stop(); if (process.platform !== 'darwin') app.quit(); });
+app.on('will-quit', () => { if (overlay) overlay.destroy(); });

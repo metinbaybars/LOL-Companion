@@ -20,6 +20,8 @@ profilini, maç geçmişini ve oyuna girdiğinde rakip takımın analizini göst
 - **Maç geçmişi**: zafer/bozgun, KDA, CS, eşyalar; tıklayınca 10 oyunculu detay.
 - **Rakip takım analizi** (yükleme ekranında otomatik başlar): her oyuncunun derecesi, son formu, oynadığı şampiyondaki deneyimi ve ustalığı, tehdit puanı ve etiketler (OTP, Uzman, Seri, Çok ölüyor, Ana rolü dışında…). Takım ortalaması ve en tehlikeli oyuncu.
 - **Canlı skor tablosu**: süre, skor, kule/ejder/baron/larva, eşya altını farkı, tüm oyuncuların KDA/CS/eşya/ölüm süresi (2 sn'de bir güncellenir).
+- **Oyun içi pencere**: oyundayken kısayol tuşuyla (varsayılan **Alt+X**) açılan küçük panel. Rakiplerin derecesi, tehdit puanı, etiketleri, canlı KDA'sı ve ölüm sayaçları; skor, süre ve altın farkı. Tıklamaları oyuna geçirir, odağı çalmaz. Tuş, konum ve koyuluk Ayarlar'dan değiştirilebilir.
+  > League'de **Ayarlar → Video → Pencere Modu** "Çerçevesiz" ya da "Pencere" olmalı. "Tam ekran" modunda hiçbir uygulama oyunun üstünde görünemez.
 - İsteğe bağlı "her zaman üstte" penceresi.
 
 ## Nasıl çalışır

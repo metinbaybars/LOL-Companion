@@ -375,8 +375,55 @@ function fillSettings(s) {
   $('#sLiveCount').value = s.liveMatchCount;
   $('#sAutoAnalyze').checked = s.autoAnalyze;
   $('#sOnTop').checked = s.alwaysOnTop;
+  $('#sHotkey').value = s.overlayHotkey || '';
+  $('#sHotkey').dataset.value = s.overlayHotkey || '';
+  $('#sOverlayPos').value = s.overlayPosition || 'right';
+  $('#sOpacity').value = s.overlayOpacity ?? 0.88;
+  $('#sOpacityVal').textContent = `%${Math.round((s.overlayOpacity ?? 0.88) * 100)}`;
+  $('#sOverlayAuto').checked = !!s.overlayAutoShow;
+  $('#hotkeyHint').innerHTML = s.overlayHotkey
+    ? `Oyun içinde <span class="kbd">${esc(s.overlayHotkey)}</span> ile küçük pencereyi aç/kapat.` : '';
   refreshSource();
 }
+
+// ---------- Kısayol kaydedici ----------
+// Klavye olayını Electron'un kısayol biçimine çevirir: "Ctrl+Shift+X", "Alt+F1"...
+function keyName(e) {
+  const c = e.code;
+  if (/^Key[A-Z]$/.test(c)) return c.slice(3);
+  if (/^Digit\d$/.test(c)) return c.slice(5);
+  if (/^F\d{1,2}$/.test(c)) return c;
+  if (/^Numpad\d$/.test(c)) return `num${c.slice(6)}`;
+  const map = {
+    Space: 'Space', Tab: 'Tab', Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']',
+    Backslash: '\\', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/',
+    Insert: 'Insert', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown',
+    ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right',
+  };
+  return map[c] || null;
+}
+const hk = $('#sHotkey');
+hk.addEventListener('focus', () => { hk.classList.add('recording'); hk.value = 'Tuşlara bas…'; });
+hk.addEventListener('blur', () => { hk.classList.remove('recording'); hk.value = hk.dataset.value || ''; });
+hk.addEventListener('keydown', (e) => {
+  e.preventDefault();
+  if (e.code === 'Escape') { hk.blur(); return; }
+  if (e.code === 'Backspace' || e.code === 'Delete') { hk.dataset.value = ''; hk.blur(); return; } // kapat
+  const key = keyName(e);
+  if (!key) return; // sadece Ctrl/Alt/Shift basıldı
+  const mods = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift'].filter(Boolean);
+  // Tek başına harf/rakam oyunda yetenek tuşlarını bozar; F tuşları hariç değiştirici iste
+  if (!mods.length && !/^F\d+$/.test(key)) { toast('Ctrl, Alt veya Shift ile birlikte bas (ör. Alt+X). F tuşları tek başına olabilir.'); return; }
+  hk.dataset.value = [...mods, key].join('+');
+  hk.blur();
+});
+$('#sOpacity').addEventListener('input', (e) => { $('#sOpacityVal').textContent = `%${Math.round(e.target.value * 100)}`; });
+$('#btnOverlayPreview').addEventListener('click', async () => {
+  try {
+    const visible = await api.toggleOverlay();
+    $('#btnOverlayPreview').textContent = visible ? 'Gizle' : 'Önizle';
+  } catch (e) { toast(e.message); }
+});
 
 $('#settingsForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -390,6 +437,10 @@ $('#settingsForm').addEventListener('submit', async (e) => {
       liveMatchCount: Math.max(0, Math.min(20, Number($('#sLiveCount').value) || 0)),
       autoAnalyze: $('#sAutoAnalyze').checked,
       alwaysOnTop: $('#sOnTop').checked,
+      overlayHotkey: $('#sHotkey').dataset.value || '',
+      overlayPosition: $('#sOverlayPos').value,
+      overlayOpacity: Number($('#sOpacity').value),
+      overlayAutoShow: $('#sOverlayAuto').checked,
     });
     fillSettings(s);
     $('#settingsSaved').textContent = 'Kaydedildi ✓';

@@ -67,6 +67,7 @@
           <div class="radar"><span></span><span></span><span></span></div>
           <h3>Oyun bekleniyor</h3>
           <p>Maç yükleme ekranı açıldığında rakip analizi otomatik başlar.</p>
+          <p id="hotkeyHint" class="small" style="margin-top:14px"></p>
         </div>
 
         <div id="liveBoard"></div>
@@ -116,6 +117,37 @@
             <div class="row">
               <div><b>Analiz maç sayısı</b><small>Canlı analizde her oyuncu için incelenen maçlar.</small></div>
               <input id="sLiveCount" type="number" min="0" max="20" class="num" />
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Oyun içi pencere</h3>
+            <div class="row">
+              <div><b>Kısayol tuşu</b><small>Oyunda bu tuşa basınca küçük pencere açılır/kapanır. Değiştirmek için kutuya tıklayıp yeni tuşlara bas.</small></div>
+              <input id="sHotkey" class="hotkey" readonly placeholder="Kapalı" />
+            </div>
+            <div class="row">
+              <div><b>Konum</b><small>Ekranın neresinde görünsün.</small></div>
+              <select id="sOverlayPos">
+                <option value="right">Sağ orta</option>
+                <option value="left">Sol orta</option>
+                <option value="top-right">Sağ üst</option>
+                <option value="top-left">Sol üst</option>
+                <option value="bottom-right">Sağ alt</option>
+                <option value="bottom-left">Sol alt</option>
+              </select>
+            </div>
+            <div class="row">
+              <div><b>Arka plan koyuluğu</b><small id="sOpacityVal"></small></div>
+              <input id="sOpacity" type="range" min="0.4" max="1" step="0.02" />
+            </div>
+            <div class="row">
+              <div><b>Oyun başlayınca otomatik aç</b><small>Maç bitince kendiliğinden kapanır.</small></div>
+              <label class="switch"><input id="sOverlayAuto" type="checkbox" /><span></span></label>
+            </div>
+            <div class="row">
+              <div><small>League'de görüntü modu <b style="display:inline">Çerçevesiz</b> ya da <b style="display:inline">Pencere</b> olmalı; "Tam ekran" modunda hiçbir pencere oyunun üstünde görünemez.</small></div>
+              <button type="button" id="btnOverlayPreview" class="btn ghost">Önizle</button>
             </div>
           </div>
 

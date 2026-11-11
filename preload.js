@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld('api', {
   analyzeGame: () => invoke('game:analyze'),
   liveStatus: () => invoke('live:status'),
   openExternal: (url) => invoke('open:external', url),
+  toggleOverlay: () => invoke('overlay:toggle'),
+  overlayStatus: () => invoke('overlay:status'),
 
   onLiveUpdate: on('live:update'),
   onLiveState: on('live:state'),

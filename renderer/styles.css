@@ -343,6 +343,10 @@ details.card[open] summary::after { transform: rotate(180deg); }
 details.card summary h3 { margin: 0 !important; }
 details.card[open] summary { margin-bottom: 8px; }
 .save-row { display: flex; align-items: center; gap: 12px; }
+input.hotkey { width: 160px; text-align: center; font-weight: 650; cursor: pointer; caret-color: transparent; }
+input.hotkey.recording { border-color: var(--accent); color: var(--accent); }
+input[type="range"] { width: 160px; padding: 0; accent-color: var(--accent); border: 0; background: transparent; box-shadow: none; }
+.kbd { display: inline-block; font: 600 11px "Segoe UI"; padding: 1px 7px; border-radius: 6px; background: var(--surface-3); border: 1px solid var(--line-2); color: var(--text); }
 .saved { color: var(--good); font-size: 13px; }
 
 .switch { position: relative; width: 42px; height: 24px; flex: none; }
