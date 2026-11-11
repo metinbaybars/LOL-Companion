@@ -1,0 +1,31 @@
+{
+  "name": "lol-companion",
+  "productName": "LoL Companion",
+  "version": "0.2.0",
+  "description": "League of Legends profil, maç geçmişi, rakip analizi ve canlı oyun yardımcısı",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node scripts/start.js",
+    "check": "node --check main.js && node --check preload.js && node --check src/riot-api.js && node --check src/lcu.js && node --check src/providers.js && node --check src/live-client.js && node --check src/analysis.js && node --check src/ddragon.js && node --check renderer/renderer.js",
+    "dist": "electron-builder --win --publish never",
+    "dist:local": "electron-builder --win --publish never -c.win.signAndEditExecutable=false"
+  },
+  "build": {
+    "appId": "com.lolcompanion.app",
+    "productName": "LoL Companion",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "src/**/*", "renderer/**/*", "package.json"],
+    "win": { "target": ["portable", "nsis"] },
+    "portable": { "artifactName": "LoL-Companion-${version}-portable.${ext}" },
+    "nsis": {
+      "artifactName": "LoL-Companion-Setup-${version}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  }
+}
