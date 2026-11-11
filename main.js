@@ -213,7 +213,18 @@ function createWindow() {
   });
 }
 
+// Tek kopya: ikinci kez açılırsa mevcut pencereyi öne getir (iki kopya aynı kısayolu ve veri klasörünü paylaşamaz)
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) app.quit();
+app.on('second-instance', () => {
+  if (!win) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+});
+
 app.whenReady().then(() => {
+  if (!gotLock) return;
   settings = loadSettings();
   riot = new RiotApi({ apiKey: settings.apiKey, platform: settings.platform });
   lcuProvider = new LcuProvider(new LcuClient());
