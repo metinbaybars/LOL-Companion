@@ -61,6 +61,13 @@ class TrayManager {
     });
   }
 
+  notifyFullscreen() {
+    this.tray.displayBalloon({
+      iconType: 'warning', title: 'Oyun içi pencere görünmüyor',
+      content: 'League "Tam ekran" modunda; bu modda hiçbir pencere oyunun üstüne çıkamaz. Oyunda Esc → Video → Pencere Modu → Çerçevesiz yap.',
+    });
+  }
+
   destroy() { this.tray.destroy(); }
 }
 

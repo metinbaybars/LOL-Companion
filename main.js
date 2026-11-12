@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const { OverlayManager } = require('./src/overlay');
 const { TrayManager, getOpenAtLogin, setOpenAtLogin } = require('./src/tray');
+const { readWindowMode, MODE_TR } = require('./src/game-config');
 const path = require('path');
 const fs = require('fs');
 const { RiotApi, parseRiotId, cleanText } = require('./src/riot-api');
@@ -313,6 +314,10 @@ app.whenReady().then(() => {
   handle('live:status', () => ({ inGame: live.inGame, phase: lastPhase }));
   handle('overlay:toggle', () => { const v = overlay.toggle(); if (tray) tray.refresh(); return v; });
   handle('overlay:status', () => ({ visible: overlay.visible, hotkey: overlay.hotkey }));
+  handle('league:windowMode', () => {
+    const mode = readWindowMode(lcuProvider.lcu.lastInstallDir);
+    return { mode, label: MODE_TR[mode] || null };
+  });
   handle('open:external', (url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); });
 
   createWindow();
@@ -326,7 +331,16 @@ app.whenReady().then(() => {
     getStatus: () => (live.inGame ? 'Durum: Oyunda'
       : lastPhase ? 'Durum: League istemcisi bağlı' : 'Durum: League kapalı'),
   });
-  overlay.onChange = () => tray.refresh(); // kısayolla açılıp kapanınca menüdeki işaret güncellensin
+  // Kısayolla açılıp kapanınca menüdeki işaret güncellensin; oyun tam ekransa nedenini söyle
+  let fullscreenWarned = false;
+  overlay.onChange = (visible) => {
+    tray.refresh();
+    if (visible && live.inGame && !fullscreenWarned && readWindowMode(lcuProvider.lcu.lastInstallDir) === 0) {
+      fullscreenWarned = true; // her oyunda bir kez
+      tray.notifyFullscreen();
+    }
+  };
+  live.on('gameEnd', () => { fullscreenWarned = false; });
 
   live.on('gameStart', () => { send('live:state', { inGame: true }); tryAutoAnalyze(); tray.refresh(); });
   live.on('update', (data) => send('live:update', analysis.liveSnapshot(data, ddragon)));

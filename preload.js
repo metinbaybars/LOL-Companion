@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('api', {
   openExternal: (url) => invoke('open:external', url),
   toggleOverlay: () => invoke('overlay:toggle'),
   getStartup: () => invoke('startup:get'),
+  leagueWindowMode: () => invoke('league:windowMode'),
   setStartup: (enabled) => invoke('startup:set', enabled),
   quitApp: () => invoke('app:quit'),
   overlayStatus: () => invoke('overlay:status'),

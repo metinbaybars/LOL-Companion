@@ -439,6 +439,22 @@ hk.addEventListener('keydown', (e) => {
   hk.blur();
 });
 $('#sOpacity').addEventListener('input', (e) => { $('#sOpacityVal').textContent = `%${Math.round(e.target.value * 100)}`; });
+// League'in görüntü modu: tam ekransa oyun içi pencere görünmez
+async function loadWindowMode() {
+  try {
+    const { mode, label } = await api.leagueWindowMode();
+    const el = $('#sWindowMode');
+    if (mode === 0) {
+      el.innerHTML = '⚠ League şu an <span style="color:var(--loss)">Tam ekran</span> modunda';
+      $('#sWindowModeNote').innerHTML = 'Bu modda oyun içi pencere oyunun <b style="display:inline">arkasında</b> kalır. Oyunda <b style="display:inline">Esc → Video → Pencere Modu → Çerçevesiz</b> yap.';
+    } else if (label) {
+      el.innerHTML = `League görüntü modu: <span style="color:var(--good)">${esc(label)}</span> ✓`;
+      $('#sWindowModeNote').textContent = 'Oyun içi pencere oyunun üstünde görünecek.';
+    }
+  } catch { /* yok say */ }
+}
+document.querySelector('[data-view="settings"]').addEventListener('click', loadWindowMode);
+
 // "Windows ile başlat" anında uygulanır (Kaydet beklemez)
 async function loadStartup() {
   try {
@@ -491,6 +507,7 @@ $('#devLink').addEventListener('click', (e) => { e.preventDefault(); api.openExt
 (async () => {
   try { fillSettings(await api.getSettings()); } catch (e) { toast(e.message); }
   loadStartup();
+  loadWindowMode();
   try {
     dd = await api.getDDragon();
     for (const c of Object.values(dd.champsByKey)) champNameById[c.id] = c.name;

@@ -73,10 +73,18 @@ class OverlayManager {
     this.win.setAlwaysOnTop(true, 'screen-saver');
     this.visible = true;
     this.push(true);
+    // Oyun penceresi odaklanınca kendini öne alabilir; paneli düzenli olarak tekrar en üste koy
+    clearInterval(this._topTimer);
+    this._topTimer = setInterval(() => {
+      if (!this.visible || !this.win || this.win.isDestroyed()) return;
+      this.win.setAlwaysOnTop(true, 'screen-saver');
+      this.win.moveTop();
+    }, 1000);
     this.onChange?.(true);
   }
 
   hide() {
+    clearInterval(this._topTimer);
     if (this.win) this.win.hide();
     this.visible = false;
     this.onChange?.(false);
