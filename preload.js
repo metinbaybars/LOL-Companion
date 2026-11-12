@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('api', {
   liveStatus: () => invoke('live:status'),
   openExternal: (url) => invoke('open:external', url),
   toggleOverlay: () => invoke('overlay:toggle'),
+  getStartup: () => invoke('startup:get'),
+  setStartup: (enabled) => invoke('startup:set', enabled),
+  quitApp: () => invoke('app:quit'),
   overlayStatus: () => invoke('overlay:status'),
 
   onLiveUpdate: on('live:update'),

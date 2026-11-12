@@ -73,11 +73,13 @@ class OverlayManager {
     this.win.setAlwaysOnTop(true, 'screen-saver');
     this.visible = true;
     this.push(true);
+    this.onChange?.(true);
   }
 
   hide() {
     if (this.win) this.win.hide();
     this.visible = false;
+    this.onChange?.(false);
   }
 
   toggle() { if (this.visible) this.hide(); else this.show(); return this.visible; }

@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const { OverlayManager } = require('./src/overlay');
+const { TrayManager, getOpenAtLogin, setOpenAtLogin } = require('./src/tray');
 const path = require('path');
 const fs = require('fs');
 const { RiotApi, parseRiotId, cleanText } = require('./src/riot-api');
@@ -16,6 +17,8 @@ const DEFAULT_SETTINGS = {
   profileMatchCount: 15, liveMatchCount: 8, autoAnalyze: true,
   // Oyun içi pencere
   overlayHotkey: 'Alt+X', overlayPosition: 'right', overlayOpacity: 0.88, overlayAutoShow: false,
+  closeToTray: true, // pencereyi kapatınca tepsiye in, uygulama arka planda çalışsın
+  trayNotified: false,
 };
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 function loadSettings() {
@@ -39,6 +42,17 @@ let win;
 const live = new LiveClient(2000);
 let analysisRun = 0; // yeni analiz başlayınca eskisini iptal etmek için
 let overlay;
+let tray;
+let isQuitting = false;
+const startHidden = process.argv.includes('--hidden'); // Windows açılışında sessizce tepside başla
+
+function showWindow() {
+  if (!win) createWindow();
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+function quitApp() { isQuitting = true; app.quit(); }
 
 const send = (ch, payload) => {
   if (overlay) overlay.track(ch, payload); // oyun içi pencere de aynı olayları izler
@@ -181,7 +195,7 @@ async function pollClientPhase() {
   if (settings.dataSource !== 'riot' && (await lcuProvider.available())) {
     phase = await lcuProvider.lcu.get('/lol-gameflow/v1/gameflow-phase').catch(() => null);
   }
-  if (phase !== lastPhase) { lastPhase = phase; send('client:phase', phase); }
+  if (phase !== lastPhase) { lastPhase = phase; send('client:phase', phase); if (tray) tray.refresh(); }
   if (phase === 'InProgress') tryAutoAnalyze(); // yükleme ekranında başlar
   else if (!live.inGame && phase !== 'Reconnect') analyzedThisGame = false;
   setTimeout(pollClientPhase, 3000);
@@ -194,6 +208,8 @@ function createWindow() {
     backgroundColor: '#07090e',
     title: 'LoL Companion',
     autoHideMenuBar: true,
+    icon: path.join(__dirname, 'assets', 'icon.png'),
+    show: !startHidden,
     // Özel koyu başlık çubuğu; küçült/büyüt/kapat düğmeleri Windows'un kendisi
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#07090e', symbolColor: '#a3adbd', height: 40 },
@@ -206,7 +222,18 @@ function createWindow() {
     },
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
-  win.on('closed', () => { win = null; app.quit(); }); // gizli oyun içi pencere uygulamayı açık tutmasın
+  // X'e basınca kapanma, tepsiye in (Overwolf gibi). Tamamen çıkış tepsi menüsünden.
+  win.on('close', (e) => {
+    if (isQuitting || !settings.closeToTray) return;
+    e.preventDefault();
+    win.hide();
+    if (!settings.trayNotified && tray) {
+      tray.notifyHidden();
+      settings.trayNotified = true;
+      saveSettings(settings);
+    }
+  });
+  win.on('closed', () => { win = null; if (!settings.closeToTray) quitApp(); });
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://')) shell.openExternal(url);
     return { action: 'deny' };
@@ -216,12 +243,7 @@ function createWindow() {
 // Tek kopya: ikinci kez açılırsa mevcut pencereyi öne getir (iki kopya aynı kısayolu ve veri klasörünü paylaşamaz)
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
-app.on('second-instance', () => {
-  if (!win) return;
-  if (win.isMinimized()) win.restore();
-  win.show();
-  win.focus();
-});
+app.on('second-instance', () => { if (settings) showWindow(); });
 
 app.whenReady().then(() => {
   if (!gotLock) return;
@@ -251,8 +273,12 @@ app.whenReady().then(() => {
     saveSettings(settings);
     riot.configure({ apiKey: settings.apiKey, platform: settings.platform });
     if (win && patch.alwaysOnTop !== undefined) win.setAlwaysOnTop(!!settings.alwaysOnTop);
+    if (tray) tray.refresh();
     return publicSettings();
   });
+  handle('startup:get', () => ({ enabled: getOpenAtLogin(), supported: app.isPackaged }));
+  handle('startup:set', (enabled) => { const r = setOpenAtLogin(enabled); if (tray) tray.refresh(); return r; });
+  handle('app:quit', quitApp);
   handle('settings:clearKey', () => {
     settings.apiKey = '';
     saveSettings(settings);
@@ -265,21 +291,37 @@ app.whenReady().then(() => {
   handle('profile:me', myRiotId);
   handle('game:analyze', analyzeActiveGame);
   handle('live:status', () => ({ inGame: live.inGame, phase: lastPhase }));
-  handle('overlay:toggle', () => overlay.toggle());
+  handle('overlay:toggle', () => { const v = overlay.toggle(); if (tray) tray.refresh(); return v; });
   handle('overlay:status', () => ({ visible: overlay.visible, hotkey: overlay.hotkey }));
   handle('open:external', (url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); });
 
   createWindow();
 
-  live.on('gameStart', () => { send('live:state', { inGame: true }); tryAutoAnalyze(); });
+  tray = new TrayManager({
+    showWindow,
+    quit: quitApp,
+    toggleOverlay: () => overlay.toggle(),
+    isOverlayVisible: () => overlay.visible,
+    getHotkey: () => overlay.hotkey,
+    getStatus: () => (live.inGame ? 'Durum: Oyunda'
+      : lastPhase ? 'Durum: League istemcisi bağlı' : 'Durum: League kapalı'),
+  });
+  overlay.onChange = () => tray.refresh(); // kısayolla açılıp kapanınca menüdeki işaret güncellensin
+
+  live.on('gameStart', () => { send('live:state', { inGame: true }); tryAutoAnalyze(); tray.refresh(); });
   live.on('update', (data) => send('live:update', analysis.liveSnapshot(data, ddragon)));
-  live.on('gameEnd', () => send('live:state', { inGame: false }));
+  live.on('gameEnd', () => { send('live:state', { inGame: false }); tray.refresh(); });
   ddragon.load().catch((e) => console.error('DDragon yüklenemedi:', e.message)).finally(() => live.start());
   pollClientPhase();
 
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
-// Oyun içi pencere açık kalsa bile ana pencere kapanınca uygulama kapanır
-app.on('window-all-closed', () => { live.stop(); if (process.platform !== 'darwin') app.quit(); });
-app.on('will-quit', () => { if (overlay) overlay.destroy(); });
+// Pencereler kapansa da uygulama tepside yaşamaya devam eder; çıkış tepsi menüsünden
+app.on('window-all-closed', () => { if (!settings?.closeToTray) quitApp(); });
+app.on('before-quit', () => { isQuitting = true; });
+app.on('will-quit', () => {
+  live.stop();
+  if (overlay) overlay.destroy();
+  if (tray) tray.destroy();
+});

@@ -381,6 +381,7 @@ function fillSettings(s) {
   $('#sOpacity').value = s.overlayOpacity ?? 0.88;
   $('#sOpacityVal').textContent = `%${Math.round((s.overlayOpacity ?? 0.88) * 100)}`;
   $('#sOverlayAuto').checked = !!s.overlayAutoShow;
+  $('#sCloseToTray').checked = s.closeToTray !== false;
   $('#hotkeyHint').innerHTML = s.overlayHotkey
     ? `Oyun içinde <span class="kbd">${esc(s.overlayHotkey)}</span> ile küçük pencereyi aç/kapat.` : '';
   refreshSource();
@@ -418,6 +419,19 @@ hk.addEventListener('keydown', (e) => {
   hk.blur();
 });
 $('#sOpacity').addEventListener('input', (e) => { $('#sOpacityVal').textContent = `%${Math.round(e.target.value * 100)}`; });
+// "Windows ile başlat" anında uygulanır (Kaydet beklemez)
+async function loadStartup() {
+  try {
+    const st = await api.getStartup();
+    $('#sStartup').checked = st.enabled;
+    $('#sStartup').disabled = !st.supported;
+    if (!st.supported) $('#sStartupNote').textContent = 'Sadece kurulu .exe sürümünde çalışır.';
+  } catch { /* yok say */ }
+}
+$('#sStartup').addEventListener('change', async (e) => {
+  try { e.target.checked = await api.setStartup(e.target.checked); } catch (err) { e.target.checked = !e.target.checked; toast(err.message); }
+});
+
 $('#btnOverlayPreview').addEventListener('click', async () => {
   try {
     const visible = await api.toggleOverlay();
@@ -441,6 +455,7 @@ $('#settingsForm').addEventListener('submit', async (e) => {
       overlayPosition: $('#sOverlayPos').value,
       overlayOpacity: Number($('#sOpacity').value),
       overlayAutoShow: $('#sOverlayAuto').checked,
+      closeToTray: $('#sCloseToTray').checked,
     });
     fillSettings(s);
     $('#settingsSaved').textContent = 'Kaydedildi ✓';
@@ -455,6 +470,7 @@ $('#devLink').addEventListener('click', (e) => { e.preventDefault(); api.openExt
 // ---------- Başlangıç ----------
 (async () => {
   try { fillSettings(await api.getSettings()); } catch (e) { toast(e.message); }
+  loadStartup();
   try {
     dd = await api.getDDragon();
     for (const c of Object.values(dd.champsByKey)) champNameById[c.id] = c.name;

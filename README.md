@@ -22,6 +22,7 @@ profilini, maç geçmişini ve oyuna girdiğinde rakip takımın analizini göst
 - **Canlı skor tablosu**: süre, skor, kule/ejder/baron/larva, eşya altını farkı, tüm oyuncuların KDA/CS/eşya/ölüm süresi (2 sn'de bir güncellenir).
 - **Oyun içi pencere**: oyundayken kısayol tuşuyla (varsayılan **Alt+X**) açılan küçük panel. Rakiplerin derecesi, tehdit puanı, etiketleri, canlı KDA'sı ve ölüm sayaçları; skor, süre ve altın farkı. Tıklamaları oyuna geçirir, odağı çalmaz. Tuş, konum ve koyuluk Ayarlar'dan değiştirilebilir.
   > League'de **Ayarlar → Video → Pencere Modu** "Çerçevesiz" ya da "Pencere" olmalı. "Tam ekran" modunda hiçbir uygulama oyunun üstünde görünemez.
+- **Arka planda çalışır**: pencereyi kapatınca uygulama saatin yanındaki simge tepsisine iner (Overwolf gibi). Simgeye tıklayınca açılır; sağ tık menüsünden oyun içi pencere, "Windows ile başlat" ve **Çıkış**.
 - İsteğe bağlı "her zaman üstte" penceresi.
 
 ## Nasıl çalışır
