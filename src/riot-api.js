@@ -51,7 +51,7 @@ class RiotApi {
   }
 
   configure({ apiKey, platform }) {
-    if (apiKey !== undefined) this.apiKey = apiKey;
+    if (apiKey !== undefined && apiKey !== this.apiKey) { this.apiKey = apiKey; this.keyInvalid = false; }
     if (platform) this.platform = platform;
   }
 
@@ -83,6 +83,7 @@ class RiotApi {
         continue;
       }
       if (res.status === 401 || res.status === 403) {
+        this.keyInvalid = true; // anahtar değişene kadar tekrar deneme
         throw new RiotApiError(res.status, 'API anahtarı geçersiz veya süresi dolmuş. developer.riotgames.com adresinden yenileyin.');
       }
       if (res.status === 404) throw new RiotApiError(404, 'Bulunamadı.');

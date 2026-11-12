@@ -39,14 +39,20 @@ const winLoss = (e) => (e.losses == null ? `${e.wins} galibiyet`
 const formHtml = (form) => `<div class="form">${(form || []).map((f) => `<i class="${f}">${f === 'W' ? 'G' : 'M'}</i>`).join('')}</div>`;
 const wrClass = (x) => (x == null ? '' : x >= 0.5 ? 'good' : 'bad');
 const loadingHtml = (text) => `<div class="empty-state"><div class="spinner"></div><p style="margin-top:14px">${esc(text)}</p></div>`;
-const errorHtml = (text) => `<div class="empty-state error-state"><div class="empty-ico">!</div><h3>Bir sorun oluştu</h3><p>${esc(text)}</p></div>`;
+const clientClosedHtml = () => `<div class="empty-state"><div class="empty-ico">🎮</div><h3>League of Legends kapalı</h3>
+  <p>League'i açıp giriş yap; profilin kendiliğinden yüklenecek.</p></div>`;
+const errorHtml = (text) => (String(text).startsWith('LEAGUE_CLOSED')
+  ? clientClosedHtml()
+  : `<div class="empty-state error-state"><div class="empty-ico">!</div><h3>Bir sorun oluştu</h3><p>${esc(text)}</p></div>`);
+const cleanMsg = (m) => String(m).replace(/^LEAGUE_CLOSED:\s*/, '');
+let profileLoaded = false;
 
 // Yüklenemeyen görselleri gizle (CSP satır içi onerror'a izin vermez)
 document.addEventListener('error', (e) => { if (e.target.tagName === 'IMG') e.target.style.visibility = 'hidden'; }, true);
 
 function toast(msg) {
   const t = $('#toast');
-  t.textContent = msg;
+  t.textContent = cleanMsg(msg);
   t.classList.remove('hidden');
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => t.classList.add('hidden'), 6000);
@@ -63,7 +69,7 @@ function showView(name) {
 $('#btnMe').addEventListener('click', async () => {
   try {
     const id = await api.myRiotId();
-    if (!id) { toast('League istemcisi açık değil.'); return; }
+    if (!id) { $('#profileOut').innerHTML = clientClosedHtml(); return; }
     $('#profileInput').value = id;
     searchProfile();
   } catch (e) { toast(e.message); }
@@ -77,9 +83,21 @@ async function searchProfile() {
   out.innerHTML = loadingHtml('Profil yükleniyor…');
   try {
     renderProfile(await api.lookupProfile(id));
+    profileLoaded = true;
   } catch (err) {
     out.innerHTML = errorHtml(err.message);
   }
+}
+
+// League bağlıysa kendi profilini yükle
+async function loadMyProfile() {
+  const s = await api.sourceStatus().catch(() => ({}));
+  if (s.source !== 'lcu') {
+    if (!profileLoaded) $('#profileOut').innerHTML = clientClosedHtml();
+    return;
+  }
+  const me = await api.myRiotId().catch(() => '');
+  if (me) { $('#profileInput').value = me; searchProfile(); }
 }
 
 function rankCardHtml(title, e) {
@@ -351,14 +369,16 @@ api.onClientPhase((phase) => {
     st.textContent = phase ? `İstemci bağlı · ${PHASE_TR[phase] || phase}` : 'League istemcisi kapalı';
   }
   refreshSource();
+  // League sonradan açıldıysa profili kendiliğinden getir
+  if (phase && !profileLoaded) loadMyProfile();
 });
 
 async function refreshSource() {
   const b = $('#sourceBadge');
   try {
     const s = await api.sourceStatus();
-    b.textContent = s.source ? s.label : 'League istemcisi kapalı';
-    b.className = `chip ${s.source ? 'ok' : 'bad'}`;
+    b.textContent = s.source === 'lcu' ? 'League istemcisi' : s.source === 'riot' ? 'League kapalı · Riot API' : 'League kapalı';
+    b.className = `chip ${s.source === 'lcu' ? 'ok' : s.source === 'riot' ? 'warn' : 'bad'}`;
   } catch { b.textContent = 'Bağlantı yok'; b.className = 'chip bad'; }
 }
 
@@ -477,7 +497,6 @@ $('#devLink').addEventListener('click', (e) => { e.preventDefault(); api.openExt
   } catch { toast('Şampiyon verisi yüklenemedi (internet bağlantısını kontrol et).'); }
   const st = await api.liveStatus().catch(() => ({ inGame: false }));
   setLiveMode(st.inGame);
-  // İstemci açıksa kendi profilini otomatik getir
-  const me = await api.myRiotId().catch(() => '');
-  if (me) { $('#profileInput').value = me; searchProfile(); }
+  // İstemci açıksa kendi profilini otomatik getir, değilse "League kapalı" göster
+  loadMyProfile();
 })();

@@ -59,6 +59,7 @@ img { user-select: none; -webkit-user-drag: none; }
 .chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
 .chip.ok::before { background: var(--good); box-shadow: 0 0 8px var(--good); }
 .chip.bad::before { background: var(--loss); }
+.chip.warn::before { background: var(--warn); }
 
 /* ---------- Yerleşim ---------- */
 .shell { display: grid; grid-template-columns: 76px 1fr; height: calc(100vh - var(--titlebar)); }

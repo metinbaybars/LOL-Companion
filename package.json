@@ -1,7 +1,7 @@
 {
   "name": "lol-companion",
   "productName": "LoL Companion",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "League of Legends profil, maç geçmişi, rakip analizi ve canlı oyun yardımcısı",
   "main": "main.js",
   "license": "MIT",

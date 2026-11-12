@@ -67,17 +67,34 @@ function handle(channel, fn) {
 }
 
 // Hangi kaynaktan veri çekileceğini seçer
+const CLIENT_CLOSED = 'LEAGUE_CLOSED: League of Legends kapalı. League\'i açınca veriler kendiliğinden gelecek.';
+const riotUsable = () => !!settings.apiKey && !riot.keyInvalid;
+
 async function getProvider() {
   if (settings.dataSource !== 'riot' && (await lcuProvider.available())) return lcuProvider;
-  if (settings.apiKey) return riotProvider;
-  throw new Error(settings.dataSource === 'riot'
-    ? 'Riot API anahtarı girilmemiş (Ayarlar).'
-    : 'League istemcisi açık değil. İstemciyi açıp tekrar deneyin.');
+  if (riotUsable()) return riotProvider;
+  if (settings.dataSource === 'riot') {
+    throw new Error(settings.apiKey ? 'Riot API anahtarının süresi dolmuş. Ayarlar\'dan yenile.' : 'Riot API anahtarı girilmemiş (Ayarlar).');
+  }
+  throw new Error(CLIENT_CLOSED);
+}
+
+// Otomatik modda yedek Riot anahtarı reddedilirse, kullanıcıya asıl sebebi (League kapalı) söyle
+async function withProvider(fn) {
+  const provider = await getProvider();
+  try {
+    return await fn(provider);
+  } catch (e) {
+    if (provider.name === 'riot' && settings.dataSource !== 'riot' && (e.status === 401 || e.status === 403)) {
+      throw new Error(CLIENT_CLOSED);
+    }
+    throw e;
+  }
 }
 
 async function sourceStatus() {
   const lcuOk = settings.dataSource !== 'riot' && (await lcuProvider.available());
-  const source = lcuOk ? 'lcu' : settings.apiKey ? 'riot' : null;
+  const source = lcuOk ? 'lcu' : riotUsable() ? 'riot' : null;
   return { source, label: source === 'lcu' ? 'League istemcisi' : source === 'riot' ? 'Riot API' : null };
 }
 
@@ -96,7 +113,10 @@ async function loadQueueNames() {
 
 async function lookupProfile(riotIdStr) {
   await ddragon.load().catch(() => {});
-  const provider = await getProvider();
+  return withProvider((provider) => lookupProfileWith(provider, riotIdStr));
+}
+
+async function lookupProfileWith(provider, riotIdStr) {
   if (provider.name === 'lcu') await loadQueueNames();
   const [gameName, tagLine] = parseRiotId(riotIdStr);
   const account = await provider.findPlayer(gameName, tagLine);
